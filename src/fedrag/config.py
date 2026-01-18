@@ -34,6 +34,29 @@ class ScraperConfig(BaseModel):
     fed_base_url: str = "https://www.federalreserve.gov"
 
 
+class EmbeddingConfig(BaseModel):
+    """Configuration for OpenAI embeddings."""
+
+    model: str = "text-embedding-3-small"
+    dimensions: int = 1536
+    batch_size: int = 100  # Max texts per API call
+
+
+class QdrantConfig(BaseModel):
+    """Configuration for Qdrant vector database."""
+
+    path: Path = Path("data/qdrant")  # Local persistent storage
+    collection_name: str = "fed_documents"
+
+
+class ChunkingConfig(BaseModel):
+    """Configuration for document chunking."""
+
+    chunk_size: int = 512  # tokens
+    chunk_overlap: int = 50  # tokens
+    encoding_name: str = "cl100k_base"  # GPT-4/embedding model tokenizer
+
+
 class StorageConfig(BaseModel):
     """Configuration for document storage."""
 
@@ -69,6 +92,9 @@ class Config(BaseModel):
 
     scraper: ScraperConfig = ScraperConfig()
     storage: StorageConfig = StorageConfig()
+    embedding: EmbeddingConfig = EmbeddingConfig()
+    qdrant: QdrantConfig = QdrantConfig()
+    chunking: ChunkingConfig = ChunkingConfig()
 
 
 # Default configuration instance

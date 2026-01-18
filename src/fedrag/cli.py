@@ -13,6 +13,7 @@ from rich.table import Table
 
 from .config import Config, default_config
 from .scrapers.orchestrator import ScrapingOrchestrator
+from .services.indexing import IndexingService
 
 app = typer.Typer(
     name="fedrag",
@@ -188,6 +189,149 @@ def list_docs(
         total = store.count_documents(doc_type)
         if total > limit:
             console.print(f"[dim]Showing {limit} of {total} documents[/dim]")
+
+
+@app.command()
+def index(
+    doc_types: Optional[List[str]] = typer.Option(
+        None,
+        "--type",
+        "-t",
+        help="Document types to index (statement, minutes, speech, testimony). Can specify multiple.",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose logging",
+    ),
+) -> None:
+    """Index documents to Qdrant vector database."""
+    setup_logging(verbose)
+
+    # Validate doc types
+    valid_types = {"statement", "minutes", "speech", "testimony"}
+    if doc_types:
+        for dt in doc_types:
+            if dt not in valid_types:
+                console.print(f"[red]Invalid document type: {dt}[/red]")
+                console.print(f"Valid types: {', '.join(valid_types)}")
+                raise typer.Exit(1)
+
+    console.print("[bold]Fed Document Indexer[/bold]")
+    if doc_types:
+        console.print(f"Document types: {', '.join(doc_types)}")
+    else:
+        console.print("Document types: all")
+    console.print()
+
+    try:
+        config = Config()
+        service = IndexingService(config)
+
+        with console.status("[bold green]Indexing documents..."):
+            results = service.index_documents(doc_types=doc_types)
+
+        # Display results
+        table = Table(title="Indexing Results")
+        table.add_column("Document Type", style="cyan")
+        table.add_column("New Documents", justify="right", style="green")
+
+        for doc_type, count in results.items():
+            table.add_row(doc_type, str(count))
+
+        table.add_row("", "")
+        table.add_row("[bold]Total[/bold]", f"[bold]{sum(results.values())}[/bold]")
+
+        console.print(table)
+
+        # Show total vectors
+        stats = service.get_stats()
+        console.print(
+            f"\n[dim]Total vectors in database: {stats['total_vectors']}[/dim]"
+        )
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def search(
+    query: str = typer.Argument(
+        ...,
+        help="Search query text",
+    ),
+    limit: int = typer.Option(
+        5,
+        "--limit",
+        "-n",
+        help="Maximum number of results",
+    ),
+    doc_type: Optional[str] = typer.Option(
+        None,
+        "--type",
+        "-t",
+        help="Filter by document type",
+    ),
+    speaker: Optional[str] = typer.Option(
+        None,
+        "--speaker",
+        "-s",
+        help="Filter by speaker name",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose logging",
+    ),
+) -> None:
+    """Search indexed documents."""
+    setup_logging(verbose)
+
+    # Validate doc type
+    valid_types = {"statement", "minutes", "speech", "testimony"}
+    if doc_type and doc_type not in valid_types:
+        console.print(f"[red]Invalid document type: {doc_type}[/red]")
+        console.print(f"Valid types: {', '.join(valid_types)}")
+        raise typer.Exit(1)
+
+    try:
+        config = Config()
+        service = IndexingService(config)
+
+        with console.status("[bold green]Searching..."):
+            results = service.search(
+                query=query,
+                limit=limit,
+                doc_type=doc_type,
+                speaker=speaker,
+            )
+
+        if not results:
+            console.print("[yellow]No results found[/yellow]")
+            return
+
+        console.print(f"[bold]Search Results for:[/bold] {query}\n")
+
+        for i, result in enumerate(results, 1):
+            console.print(f"[bold cyan]{i}. {result.title}[/bold cyan]")
+            console.print(f"   [dim]Type:[/dim] {result.doc_type} | "
+                         f"[dim]Date:[/dim] {result.date} | "
+                         f"[dim]Score:[/dim] {result.score:.3f}")
+            if result.speaker:
+                console.print(f"   [dim]Speaker:[/dim] {result.speaker}")
+
+            # Show truncated text
+            preview = result.text[:300].replace("\n", " ")
+            if len(result.text) > 300:
+                preview += "..."
+            console.print(f"   {preview}\n")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
