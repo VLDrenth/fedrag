@@ -85,7 +85,7 @@ class LLMService:
             messages=messages,
             tools=self._tools,
             temperature=self.temperature,
-            max_tokens=self.max_tokens,
+            max_completion_tokens=self.max_tokens,
         )
 
     def chat_without_tools(self, messages: List[dict]) -> ChatCompletion:
@@ -101,5 +101,5 @@ class LLMService:
             model=self.model,
             messages=messages,
             temperature=self.temperature,
-            max_tokens=self.max_tokens,
+            max_completion_tokens=self.max_tokens,
         )

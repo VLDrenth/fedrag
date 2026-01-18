@@ -438,5 +438,27 @@ def _run_query(
         console.print(f"\n[dim]Tool calls: {result.tool_calls_made}[/dim]")
 
 
+@app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to bind to"),
+    reload: bool = typer.Option(False, "--reload", "-r", help="Enable auto-reload"),
+) -> None:
+    """Start the FastAPI server."""
+    import uvicorn
+
+    console.print(f"[bold]Fed RAG API Server[/bold]")
+    console.print(f"Starting server on http://{host}:{port}")
+    console.print(f"API docs available at http://{host}:{port}/docs")
+    console.print()
+
+    uvicorn.run(
+        "fedrag.api.main:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
+
+
 if __name__ == "__main__":
     app()

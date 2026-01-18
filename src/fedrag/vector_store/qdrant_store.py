@@ -3,6 +3,7 @@
 import hashlib
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from qdrant_client import QdrantClient, models
@@ -120,6 +121,19 @@ class QdrantStore:
         if not chunk_ids:
             return
 
+        def enrich_payload(payload: Dict[str, Any], chunk_id: str) -> Dict[str, Any]:
+            """Add chunk_id and date_timestamp to payload."""
+            enriched = {**payload, "chunk_id": chunk_id}
+            # Add timestamp for date range filtering
+            if "date" in payload and payload["date"]:
+                try:
+                    enriched["date_timestamp"] = datetime.fromisoformat(
+                        payload["date"]
+                    ).timestamp()
+                except ValueError:
+                    pass
+            return enriched
+
         points = [
             PointStruct(
                 id=self._chunk_id_to_int(chunk_id),
@@ -130,7 +144,7 @@ class QdrantStore:
                         values=sparse_emb.values,
                     ),
                 },
-                payload={**payload, "chunk_id": chunk_id},
+                payload=enrich_payload(payload, chunk_id),
             )
             for chunk_id, dense_emb, sparse_emb, payload in zip(
                 chunk_ids, dense_embeddings, sparse_embeddings, payloads
@@ -183,21 +197,29 @@ class QdrantStore:
                     match=MatchText(text=speaker),
                 )
             )
-        # Date range filters (ISO strings sort lexicographically)
+        # Date range filters - convert ISO strings to timestamps
         if date_start:
-            conditions.append(
-                FieldCondition(
-                    key="date",
-                    range=Range(gte=date_start),
+            try:
+                ts = datetime.fromisoformat(date_start).timestamp()
+                conditions.append(
+                    FieldCondition(
+                        key="date_timestamp",
+                        range=Range(gte=ts),
+                    )
                 )
-            )
+            except ValueError:
+                logger.warning(f"Invalid date_start format: {date_start}")
         if date_end:
-            conditions.append(
-                FieldCondition(
-                    key="date",
-                    range=Range(lte=date_end),
+            try:
+                ts = datetime.fromisoformat(date_end).timestamp()
+                conditions.append(
+                    FieldCondition(
+                        key="date_timestamp",
+                        range=Range(lte=ts),
+                    )
                 )
-            )
+            except ValueError:
+                logger.warning(f"Invalid date_end format: {date_end}")
 
         query_filter = Filter(must=conditions) if conditions else None
 
