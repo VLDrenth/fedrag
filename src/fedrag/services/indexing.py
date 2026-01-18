@@ -5,7 +5,7 @@ from typing import Dict, List, Literal, Optional
 
 from ..chunking import Chunk, DocumentChunker
 from ..config import Config, default_config
-from ..embeddings import OpenAIEmbedder
+from ..embeddings import OpenAIEmbedder, SparseEmbedder
 from ..storage.document_store import DocumentStore
 from ..vector_store import QdrantStore
 
@@ -15,7 +15,7 @@ DocType = Literal["statement", "minutes", "speech", "testimony"]
 
 
 class IndexingService:
-    """Orchestrates the document indexing pipeline."""
+    """Orchestrates the document indexing pipeline with hybrid search."""
 
     def __init__(self, config: Optional[Config] = None):
         """Initialize the indexing service.
@@ -26,7 +26,8 @@ class IndexingService:
         self.config = config or default_config
         self.document_store = DocumentStore(self.config.storage)
         self.chunker = DocumentChunker(self.config.chunking)
-        self.embedder = OpenAIEmbedder(self.config.embedding)
+        self.dense_embedder = OpenAIEmbedder(self.config.embedding)
+        self.sparse_embedder = SparseEmbedder()
         self.vector_store = QdrantStore(
             self.config.qdrant, self.config.embedding
         )
@@ -106,7 +107,7 @@ class IndexingService:
         return new_doc_count
 
     def _process_chunks_batch(self, chunks: List[Chunk]) -> None:
-        """Embed and store a batch of chunks.
+        """Embed and store a batch of chunks with both dense and sparse vectors.
 
         Args:
             chunks: List of chunks to process
@@ -117,8 +118,9 @@ class IndexingService:
         # Extract texts for embedding
         texts = [c.text for c in chunks]
 
-        # Embed all texts
-        embeddings = self.embedder.embed_batch(texts)
+        # Generate both dense and sparse embeddings
+        dense_embeddings = self.dense_embedder.embed_batch(texts)
+        sparse_embeddings = self.sparse_embedder.embed_batch(texts)
 
         # Prepare payloads
         chunk_ids = [c.chunk_id for c in chunks]
@@ -136,8 +138,10 @@ class IndexingService:
             for c in chunks
         ]
 
-        # Upsert to Qdrant
-        self.vector_store.upsert(chunk_ids, embeddings, payloads)
+        # Upsert to Qdrant with both vector types
+        self.vector_store.upsert(
+            chunk_ids, dense_embeddings, sparse_embeddings, payloads
+        )
         logger.debug(f"Processed batch of {len(chunks)} chunks")
 
     def search(
@@ -147,7 +151,7 @@ class IndexingService:
         doc_type: Optional[str] = None,
         speaker: Optional[str] = None,
     ):
-        """Search for relevant chunks.
+        """Hybrid search for relevant chunks using RRF fusion.
 
         Args:
             query: Search query text
@@ -158,12 +162,14 @@ class IndexingService:
         Returns:
             List of SearchResult objects
         """
-        # Embed the query
-        query_vector = self.embedder.embed(query)
+        # Generate both dense and sparse query embeddings
+        dense_vector = self.dense_embedder.embed(query)
+        sparse_vector = self.sparse_embedder.embed(query)
 
-        # Search in Qdrant
+        # Hybrid search in Qdrant
         return self.vector_store.search(
-            query_vector=query_vector,
+            dense_vector=dense_vector,
+            sparse_vector=sparse_vector,
             limit=limit,
             doc_type=doc_type,
             speaker=speaker,

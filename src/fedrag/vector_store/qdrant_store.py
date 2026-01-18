@@ -1,23 +1,30 @@
-"""Qdrant vector database client."""
+"""Qdrant vector database client with hybrid search support."""
 
 import hashlib
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
     MatchValue,
     PointStruct,
+    SparseVector,
+    SparseVectorParams,
     VectorParams,
 )
 
 from ..config import EmbeddingConfig, QdrantConfig, default_config
+from ..embeddings.sparse_embedder import SparseVector as SparseVectorData
 
 logger = logging.getLogger(__name__)
+
+# Named vector identifiers
+DENSE_VECTOR_NAME = "dense"
+SPARSE_VECTOR_NAME = "sparse"
 
 
 @dataclass
@@ -36,7 +43,7 @@ class SearchResult:
 
 
 class QdrantStore:
-    """Qdrant vector database wrapper."""
+    """Qdrant vector database wrapper with hybrid search."""
 
     def __init__(
         self,
@@ -60,20 +67,25 @@ class QdrantStore:
         self._ensure_collection()
 
     def _ensure_collection(self) -> None:
-        """Create collection if it doesn't exist."""
+        """Create collection with hybrid vector support if it doesn't exist."""
         collections = self._client.get_collections().collections
         collection_names = [c.name for c in collections]
 
         if self.qdrant_config.collection_name not in collection_names:
             self._client.create_collection(
                 collection_name=self.qdrant_config.collection_name,
-                vectors_config=VectorParams(
-                    size=self.embedding_config.dimensions,
-                    distance=Distance.COSINE,
-                ),
+                vectors_config={
+                    DENSE_VECTOR_NAME: VectorParams(
+                        size=self.embedding_config.dimensions,
+                        distance=Distance.COSINE,
+                    ),
+                },
+                sparse_vectors_config={
+                    SPARSE_VECTOR_NAME: SparseVectorParams(),
+                },
             )
             logger.info(
-                f"Created collection: {self.qdrant_config.collection_name}"
+                f"Created hybrid collection: {self.qdrant_config.collection_name}"
             )
 
     def _chunk_id_to_int(self, chunk_id: str) -> int:
@@ -85,21 +97,22 @@ class QdrantStore:
         Returns:
             Positive integer hash
         """
-        # Use first 16 hex chars of SHA256 for a 64-bit integer
         hash_hex = hashlib.sha256(chunk_id.encode()).hexdigest()[:16]
         return int(hash_hex, 16)
 
     def upsert(
         self,
         chunk_ids: List[str],
-        embeddings: List[List[float]],
+        dense_embeddings: List[List[float]],
+        sparse_embeddings: List[SparseVectorData],
         payloads: List[Dict[str, Any]],
     ) -> None:
-        """Upsert vectors with payloads.
+        """Upsert vectors with both dense and sparse embeddings.
 
         Args:
             chunk_ids: List of chunk IDs
-            embeddings: List of embedding vectors
+            dense_embeddings: List of dense embedding vectors
+            sparse_embeddings: List of sparse embedding vectors
             payloads: List of metadata payloads
         """
         if not chunk_ids:
@@ -108,11 +121,17 @@ class QdrantStore:
         points = [
             PointStruct(
                 id=self._chunk_id_to_int(chunk_id),
-                vector=embedding,
+                vector={
+                    DENSE_VECTOR_NAME: dense_emb,
+                    SPARSE_VECTOR_NAME: SparseVector(
+                        indices=sparse_emb.indices,
+                        values=sparse_emb.values,
+                    ),
+                },
                 payload={**payload, "chunk_id": chunk_id},
             )
-            for chunk_id, embedding, payload in zip(
-                chunk_ids, embeddings, payloads
+            for chunk_id, dense_emb, sparse_emb, payload in zip(
+                chunk_ids, dense_embeddings, sparse_embeddings, payloads
             )
         ]
 
@@ -124,15 +143,17 @@ class QdrantStore:
 
     def search(
         self,
-        query_vector: List[float],
+        dense_vector: List[float],
+        sparse_vector: SparseVectorData,
         limit: int = 10,
         doc_type: Optional[str] = None,
         speaker: Optional[str] = None,
     ) -> List[SearchResult]:
-        """Search for similar vectors.
+        """Hybrid search using RRF fusion of dense and sparse vectors.
 
         Args:
-            query_vector: Query embedding vector
+            dense_vector: Dense query embedding
+            sparse_vector: Sparse query embedding
             limit: Maximum results to return
             doc_type: Optional filter by document type
             speaker: Optional filter by speaker
@@ -159,11 +180,28 @@ class QdrantStore:
 
         query_filter = Filter(must=conditions) if conditions else None
 
+        # Hybrid search with RRF fusion
         results = self._client.query_points(
             collection_name=self.qdrant_config.collection_name,
-            query=query_vector,
+            prefetch=[
+                models.Prefetch(
+                    query=dense_vector,
+                    using=DENSE_VECTOR_NAME,
+                    limit=limit * 2,  # Fetch more for fusion
+                    filter=query_filter,
+                ),
+                models.Prefetch(
+                    query=SparseVector(
+                        indices=sparse_vector.indices,
+                        values=sparse_vector.values,
+                    ),
+                    using=SPARSE_VECTOR_NAME,
+                    limit=limit * 2,
+                    filter=query_filter,
+                ),
+            ],
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
             limit=limit,
-            query_filter=query_filter,
         ).points
 
         return [
