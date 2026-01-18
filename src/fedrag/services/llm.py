@@ -40,7 +40,7 @@ class LLMService:
 
     def __init__(
         self,
-        model: str = "gpt-4o",
+        model: str = "gpt-5.2",
         temperature: float = 0.0,
         max_tokens: int = 4096,
     ):

@@ -96,7 +96,7 @@ class RerankerConfig(BaseModel):
 class LLMConfig(BaseModel):
     """Configuration for LLM service."""
 
-    model: str = "gpt-4o"
+    model: str = "gpt-5.2"
     temperature: float = 0.0
     max_tokens: int = 4096
 
