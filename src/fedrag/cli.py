@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import typer
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
@@ -14,6 +15,9 @@ from rich.table import Table
 from .config import Config, default_config
 from .scrapers.orchestrator import ScrapingOrchestrator
 from .services.indexing import IndexingService
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = typer.Typer(
     name="fedrag",
@@ -280,6 +284,16 @@ def search(
         "-s",
         help="Filter by speaker name",
     ),
+    date_start: Optional[str] = typer.Option(
+        None,
+        "--date-start",
+        help="Filter by start date (YYYY-MM-DD)",
+    ),
+    date_end: Optional[str] = typer.Option(
+        None,
+        "--date-end",
+        help="Filter by end date (YYYY-MM-DD)",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -307,6 +321,8 @@ def search(
                 limit=limit,
                 doc_type=doc_type,
                 speaker=speaker,
+                date_start=date_start,
+                date_end=date_end,
             )
 
         if not results:
@@ -332,6 +348,94 @@ def search(
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(1)
+
+
+@app.command()
+def query(
+    question: Optional[str] = typer.Argument(
+        None,
+        help="Question to ask about Federal Reserve communications",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose logging",
+    ),
+    show_sources: bool = typer.Option(
+        True,
+        "--sources/--no-sources",
+        help="Show source citations",
+    ),
+) -> None:
+    """Ask questions about Federal Reserve communications."""
+    from .services.query_pipeline import QueryPipeline
+
+    setup_logging(verbose)
+
+    try:
+        config = Config()
+        pipeline = QueryPipeline(config)
+
+        if question:
+            # Single question mode
+            _run_query(pipeline, question, show_sources, verbose)
+        else:
+            # Interactive mode
+            console.print("[bold]Fed RAG Query Interface[/bold]")
+            console.print("Ask questions about Federal Reserve communications.")
+            console.print("Type 'quit' or 'exit' to leave.\n")
+
+            while True:
+                try:
+                    user_input = console.input("[bold cyan]Query:[/bold cyan] ").strip()
+                except EOFError:
+                    break
+
+                if not user_input:
+                    continue
+                if user_input.lower() in ("quit", "exit", "q"):
+                    console.print("[dim]Goodbye![/dim]")
+                    break
+
+                _run_query(pipeline, user_input, show_sources, verbose)
+                console.print()
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted by user[/yellow]")
+        raise typer.Exit(130)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+def _run_query(
+    pipeline, question: str, show_sources: bool, verbose: bool = False
+) -> None:
+    """Execute a single query and display results."""
+    with console.status("[bold green]Thinking..."):
+        result = pipeline.query(question)
+
+    console.print(f"\n[bold]Answer:[/bold]\n{result.answer}")
+
+    if show_sources and result.sources:
+        console.print("\n[bold]Sources:[/bold]")
+        seen_docs = set()
+        for source in result.sources:
+            # Deduplicate by doc_id
+            if source.doc_id in seen_docs:
+                continue
+            seen_docs.add(source.doc_id)
+
+            console.print(
+                f"  - [cyan]{source.title}[/cyan] "
+                f"({source.doc_type}, {source.date}"
+                + (f", {source.speaker}" if source.speaker else "")
+                + ")"
+            )
+
+    if verbose:
+        console.print(f"\n[dim]Tool calls: {result.tool_calls_made}[/dim]")
 
 
 if __name__ == "__main__":

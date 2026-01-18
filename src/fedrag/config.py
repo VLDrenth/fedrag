@@ -87,6 +87,20 @@ class StorageConfig(BaseModel):
         self.raw_dir.mkdir(parents=True, exist_ok=True)
 
 
+class RerankerConfig(BaseModel):
+    """Configuration for cross-encoder reranking."""
+
+    model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+
+class LLMConfig(BaseModel):
+    """Configuration for LLM service."""
+
+    model: str = "gpt-4o"
+    temperature: float = 0.0
+    max_tokens: int = 4096
+
+
 class Config(BaseModel):
     """Main configuration container."""
 
@@ -95,6 +109,8 @@ class Config(BaseModel):
     embedding: EmbeddingConfig = EmbeddingConfig()
     qdrant: QdrantConfig = QdrantConfig()
     chunking: ChunkingConfig = ChunkingConfig()
+    reranker: RerankerConfig = RerankerConfig()
+    llm: LLMConfig = LLMConfig()
 
 
 # Default configuration instance

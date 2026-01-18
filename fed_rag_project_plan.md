@@ -106,17 +106,114 @@ A retrieval-augmented generation system for querying Federal Reserve communicati
 4. Store raw documents in structured format
 
 ### Phase 2: Chunking & Indexing
-5. Chunk documents (~500 tokens, with overlap)
+5. Chunk documents (1000 tokens, with overlap)
 6. Preserve metadata on each chunk
 7. Embed with sentence-transformers or OpenAI embeddings
 8. Store in vector DB with metadata filtering support
 9. Set up BM25 index for hybrid search
 
 ### Phase 3: Query Pipeline
-10. Build query analyzer: classify query type, extract filters, decompose if needed
-11. Implement hybrid retrieval with metadata filtering
-12. Add reranker (cross-encoder)
-13. Build synthesis prompt with citation formatting
+The LLM receives user queries and has access to a search tool. It decides when and how to call the tool, then synthesizes the final answer. There is no separate "query analyzer" component.
+
+**Components:**
+- LLM with tool/function calling (OpenAI gpt-5.2)
+- Search tool (hybrid retrieval wrapped as a callable)
+- Reranker (cross-encoder, runs inside tool before returning results)
+
+**Tool Definition:**
+```python
+tools = [{
+    "name": "search_fed_documents",
+    "description": "Search Federal Reserve speeches, statements, and minutes to find what Fed officials have said about economic topics.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Search query describing the topic"
+            },
+            "speaker": {
+                "type": "string",
+                "description": "Filter by speaker name, e.g. 'Jerome Powell', 'Christopher Waller'"
+            },
+            "doc_type": {
+                "type": "string",
+                "enum": ["speech", "statement", "minutes"],
+                "description": "Filter by document type"
+            },
+            "date_start": {
+                "type": "string",
+                "format": "date",
+                "description": "Filter to documents on or after this date (YYYY-MM-DD)"
+            },
+            "date_end": {
+                "type": "string",
+                "format": "date",
+                "description": "Filter to documents on or before this date (YYYY-MM-DD)"
+            }
+        },
+        "required": ["query"]
+    }
+}]
+```
+
+**What the LLM handles:**
+- Decides if search is needed at all
+- Extracts filters from natural language ("What did Waller say last month?" → speaker="Christopher Waller", date_start/end for last month)
+- Decomposes complex queries into multiple tool calls
+- Synthesizes results into a coherent answer with citations
+
+**What the tool handles:**
+- Hybrid search (dense + sparse vectors with RRF fusion)
+- Metadata filtering (speaker, date range, doc_type)
+- Reranking top results with cross-encoder
+- Returning formatted chunks with source metadata
+
+**Example Flow - Temporal Query:**
+```
+User: "How has Powell's tone on inflation changed since 2023?"
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LLM receives query                                         │
+│  Decides: temporal evolution → needs multiple searches      │
+└─────────────────────────────────────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+   Tool call #1            Tool call #2
+   query: "inflation"      query: "inflation"
+   speaker: "Jerome Powell" speaker: "Jerome Powell"
+   date_start: "2023-01-01" date_start: "2024-01-01"
+   date_end: "2023-12-31"   date_end: "2025-01-18"
+        │                       │
+        ▼                       ▼
+   [2023 chunks]           [2024-25 chunks]
+        │                       │
+        └───────────┬───────────┘
+                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LLM receives both result sets                              │
+│  Synthesizes: "In early 2023, Powell emphasized... By late  │
+│  2024, his tone shifted to..." with citations               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Example Flow - Speaker Comparison:**
+```
+User: "Compare Goolsbee and Bowman on rate cuts"
+                    │
+                    ▼
+        ┌───────────┴───────────┐
+        ▼                       ▼
+   Tool call #1            Tool call #2
+   query: "rate cuts"      query: "rate cuts"
+   speaker: "Austan Goolsbee"  speaker: "Michelle Bowman"
+        │                       │
+        └───────────┬───────────┘
+                    ▼
+   LLM synthesizes side-by-side comparison with citations
+```
 
 ### Phase 4: Interface
 14. Build FastAPI backend with `/query` endpoint

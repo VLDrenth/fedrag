@@ -10,8 +10,10 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    MatchText,
     MatchValue,
     PointStruct,
+    Range,
     SparseVector,
     SparseVectorParams,
     VectorParams,
@@ -148,6 +150,8 @@ class QdrantStore:
         limit: int = 10,
         doc_type: Optional[str] = None,
         speaker: Optional[str] = None,
+        date_start: Optional[str] = None,
+        date_end: Optional[str] = None,
     ) -> List[SearchResult]:
         """Hybrid search using RRF fusion of dense and sparse vectors.
 
@@ -157,6 +161,8 @@ class QdrantStore:
             limit: Maximum results to return
             doc_type: Optional filter by document type
             speaker: Optional filter by speaker
+            date_start: Optional start date filter (YYYY-MM-DD)
+            date_end: Optional end date filter (YYYY-MM-DD)
 
         Returns:
             List of SearchResult objects
@@ -174,7 +180,22 @@ class QdrantStore:
             conditions.append(
                 FieldCondition(
                     key="speaker",
-                    match=MatchValue(value=speaker),
+                    match=MatchText(text=speaker),
+                )
+            )
+        # Date range filters (ISO strings sort lexicographically)
+        if date_start:
+            conditions.append(
+                FieldCondition(
+                    key="date",
+                    range=Range(gte=date_start),
+                )
+            )
+        if date_end:
+            conditions.append(
+                FieldCondition(
+                    key="date",
+                    range=Range(lte=date_end),
                 )
             )
 

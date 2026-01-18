@@ -150,6 +150,8 @@ class IndexingService:
         limit: int = 10,
         doc_type: Optional[str] = None,
         speaker: Optional[str] = None,
+        date_start: Optional[str] = None,
+        date_end: Optional[str] = None,
     ):
         """Hybrid search for relevant chunks using RRF fusion.
 
@@ -158,6 +160,8 @@ class IndexingService:
             limit: Maximum results
             doc_type: Optional filter by document type
             speaker: Optional filter by speaker
+            date_start: Optional start date filter (YYYY-MM-DD)
+            date_end: Optional end date filter (YYYY-MM-DD)
 
         Returns:
             List of SearchResult objects
@@ -173,6 +177,8 @@ class IndexingService:
             limit=limit,
             doc_type=doc_type,
             speaker=speaker,
+            date_start=date_start,
+            date_end=date_end,
         )
 
     def get_stats(self) -> Dict[str, int]:
