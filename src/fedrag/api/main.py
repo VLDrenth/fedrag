@@ -1,5 +1,6 @@
 """FastAPI application for Fed RAG API."""
 
+import os
 from typing import Literal
 
 from fastapi import FastAPI
@@ -15,10 +16,18 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS for local development
+# CORS configuration
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+# Add production frontend URL from env
+if frontend_url := os.getenv("FRONTEND_URL"):
+    ALLOWED_ORIGINS.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Vite dev server
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
