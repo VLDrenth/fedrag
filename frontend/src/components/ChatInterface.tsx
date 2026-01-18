@@ -88,32 +88,8 @@ function ChatInterface() {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-lg">
-              {/* Geometric hexagon icon */}
-              <div className="w-16 h-16 mx-auto mb-6 relative">
-                <svg viewBox="0 0 64 64" className="w-full h-full">
-                  <polygon
-                    points="32,4 58,18 58,46 32,60 6,46 6,18"
-                    fill="none"
-                    stroke="url(#gradient)"
-                    strokeWidth="1.5"
-                    className="opacity-60"
-                  />
-                  <polygon
-                    points="32,14 48,23 48,41 32,50 16,41 16,23"
-                    fill="url(#gradient)"
-                    className="opacity-10"
-                  />
-                  <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#2563eb" />
-                      <stop offset="100%" stopColor="#4f46e5" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-
-              <h2 className="text-2xl font-semibold text-stone-100 mb-2 tracking-tight">
-                Federal Reserve Research
+              <h2 className="text-2xl font-semibold text-stone-100 mb-2 tracking-tight font-mono">
+                Fed<span className="text-blue-400">/</span>RAG
               </h2>
               <p className="text-stone-400 mb-8 leading-relaxed text-sm">
                 Query speeches, statements, and policy documents using natural language.
