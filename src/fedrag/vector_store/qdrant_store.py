@@ -53,7 +53,7 @@ class QdrantStore:
         qdrant_config: Optional[QdrantConfig] = None,
         embedding_config: Optional[EmbeddingConfig] = None,
     ):
-        """Initialize Qdrant client with persistent storage.
+        """Initialize Qdrant client with persistent storage or cloud.
 
         Args:
             qdrant_config: Qdrant configuration
@@ -62,11 +62,20 @@ class QdrantStore:
         self.qdrant_config = qdrant_config or default_config.qdrant
         self.embedding_config = embedding_config or default_config.embedding
 
-        # Ensure path exists
-        self.qdrant_config.path.mkdir(parents=True, exist_ok=True)
+        # Check for cloud config from environment
+        import os
+        url = os.getenv("QDRANT_URL") or self.qdrant_config.url
+        api_key = os.getenv("QDRANT_API_KEY") or self.qdrant_config.api_key
 
-        # Initialize persistent client
-        self._client = QdrantClient(path=str(self.qdrant_config.path))
+        if url:
+            # Cloud mode
+            logger.info(f"Connecting to Qdrant Cloud: {url}")
+            self._client = QdrantClient(url=url, api_key=api_key)
+        else:
+            # Local mode
+            self.qdrant_config.path.mkdir(parents=True, exist_ok=True)
+            self._client = QdrantClient(path=str(self.qdrant_config.path))
+
         self._ensure_collection()
 
     def _ensure_collection(self) -> None:

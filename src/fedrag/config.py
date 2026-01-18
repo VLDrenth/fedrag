@@ -47,6 +47,9 @@ class QdrantConfig(BaseModel):
 
     path: Path = Path("data/qdrant")  # Local persistent storage
     collection_name: str = "fed_documents"
+    # Cloud settings (optional - if url is set, cloud mode is used)
+    url: str | None = None
+    api_key: str | None = None
 
 
 class ChunkingConfig(BaseModel):
