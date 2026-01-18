@@ -16,7 +16,7 @@ function MessageList({ messages, deduplicateSources }: MessageListProps) {
   }, [messages]);
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-6 pb-4">
       {messages.map((message) => (
         <ChatMessage
           key={message.id}

@@ -1,4 +1,4 @@
-import { useState, FormEvent, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent, KeyboardEvent } from 'react';
 
 interface ChatInputProps {
   onSubmit: (question: string) => void;
@@ -7,6 +7,16 @@ interface ChatInputProps {
 
 function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
   const [input, setInput] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -25,46 +35,54 @@ function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4">
-      <div className="flex gap-2 items-end">
-        <div className="flex-1 relative">
+    <form onSubmit={handleSubmit}>
+      <div
+        className={`bg-[#243347] rounded-xl border-2 transition-all duration-200 ${
+          isFocused
+            ? 'border-blue-500 shadow-lg shadow-blue-500/10'
+            : 'border-white/10'
+        }`}
+      >
+        <div className="flex items-end gap-3 p-3">
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question about Federal Reserve communications..."
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder="Ask about Federal Reserve policy, speeches, statements..."
             rows={1}
-            className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+            className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-stone-100 placeholder-stone-500 focus:outline-none disabled:text-stone-500"
             disabled={isLoading}
-            style={{ minHeight: '48px', maxHeight: '200px' }}
+            style={{ minHeight: '44px', maxHeight: '200px' }}
           />
-        </div>
-        <button
-          type="submit"
-          disabled={!input.trim() || isLoading}
-          className="bg-blue-600 text-white rounded-lg px-4 py-3 font-medium hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-        >
-          {isLoading ? (
-            <>
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="flex-shrink-0 w-11 h-11 bg-gradient-to-br from-[#0a1628] to-[#1a2942] text-white rounded-lg flex items-center justify-center hover:from-[#1a2942] hover:to-[#2a3952] disabled:from-stone-300 disabled:to-stone-300 disabled:cursor-not-allowed transition-all duration-200 shadow-md disabled:shadow-none"
+          >
+            {isLoading ? (
+              <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span>Thinking...</span>
-            </>
-          ) : (
-            <>
+            ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
               </svg>
-              <span>Send</span>
-            </>
-          )}
-        </button>
+            )}
+          </button>
+        </div>
       </div>
-      <p className="text-xs text-gray-400 mt-2">
-        Press Enter to send, Shift+Enter for new line
-      </p>
+      <div className="flex items-center justify-center gap-4 mt-3">
+        <span className="text-xs text-stone-400">
+          <kbd className="px-1.5 py-0.5 bg-[#0a1628] rounded text-stone-400 font-medium text-[10px]">↵</kbd> send
+        </span>
+        <span className="text-xs text-stone-400">
+          <kbd className="px-1.5 py-0.5 bg-[#0a1628] rounded text-stone-400 font-medium text-[10px]">⇧↵</kbd> new line
+        </span>
+      </div>
     </form>
   );
 }

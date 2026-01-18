@@ -2,6 +2,158 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent-blue: #3b82f6;
+  --accent-indigo: #6366f1;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply text-stone-100 antialiased;
+  background: #0a1628;
+  min-height: 100vh;
+}
+
+/* Animated gradient accent */
+.gradient-accent {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo), var(--accent-blue));
+  background-size: 200% 200%;
+}
+
+/* Subtle gradient border effect */
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-blue), var(--accent-indigo), transparent);
+  opacity: 0.5;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/30;
+}
+
+/* Markdown styling for Fed content */
+.prose-fed {
+  @apply text-stone-300 leading-relaxed;
+}
+
+.prose-fed p {
+  @apply mb-4 last:mb-0;
+}
+
+.prose-fed strong {
+  @apply font-semibold text-stone-100;
+}
+
+.prose-fed ul, .prose-fed ol {
+  @apply my-3 pl-5;
+}
+
+.prose-fed li {
+  @apply mb-1.5;
+}
+
+.prose-fed h1, .prose-fed h2, .prose-fed h3, .prose-fed h4 {
+  @apply font-semibold text-stone-100 tracking-tight mt-6 mb-3 first:mt-0;
+}
+
+.prose-fed h1 {
+  @apply text-xl;
+}
+
+.prose-fed h2 {
+  @apply text-lg;
+}
+
+.prose-fed h3 {
+  @apply text-base;
+}
+
+.prose-fed blockquote {
+  @apply border-l-2 border-blue-500/50 pl-4 my-4 text-stone-400 italic;
+}
+
+.prose-fed code {
+  @apply bg-[#243347] px-1.5 py-0.5 rounded text-sm font-mono text-stone-200;
+}
+
+.prose-fed pre {
+  @apply bg-[#243347] p-4 rounded-lg overflow-x-auto my-4;
+}
+
+.prose-fed pre code {
+  @apply bg-transparent p-0;
+}
+
+.prose-fed a {
+  @apply text-blue-400 underline underline-offset-2 hover:text-blue-300;
+}
+
+/* Transition utility */
+.transition-base {
+  @apply transition-all duration-200 ease-out;
+}
+
+/* Clean card style */
+.glass-card {
+  background: #1a2942;
+}
+
+/* Query card with animated gradient on hover */
+.query-card {
+  @apply relative overflow-hidden;
+  transition: all 0.2s ease;
+}
+
+.query-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.query-card:hover::before {
+  opacity: 1;
+}
+
+.query-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Terminal-inspired accent */
+.terminal-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--accent-blue);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
