@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { queryFed } from '../api/client';
-import { Message, Source } from '../types';
+import { HistoryMessage, Message, Source } from '../types';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 
@@ -11,6 +11,12 @@ function ChatInterface() {
 
   const handleSubmit = useCallback(async (question: string) => {
     setError(null);
+
+    // Build history from existing messages
+    const history: HistoryMessage[] = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
     // Add user message
     const userMessage: Message = {
@@ -23,7 +29,7 @@ function ChatInterface() {
     setIsLoading(true);
 
     try {
-      const response = await queryFed(question);
+      const response = await queryFed(question, history);
 
       // Add assistant message with sources
       const assistantMessage: Message = {
@@ -39,7 +45,7 @@ function ChatInterface() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [messages]);
 
   // Deduplicate sources by doc_id for display
   const deduplicateSources = (sources: Source[]): Source[] => {

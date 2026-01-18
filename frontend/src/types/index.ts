@@ -19,6 +19,11 @@ export interface QueryResponse {
   tool_calls_made: number;
 }
 
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';

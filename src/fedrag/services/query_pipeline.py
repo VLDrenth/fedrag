@@ -57,20 +57,31 @@ class QueryPipeline:
             model_name=self.config.reranker.model_name
         )
 
-    def query(self, user_query: str, max_iterations: int = 5) -> QueryResult:
+    def query(
+        self,
+        user_query: str,
+        history: list[dict] | None = None,
+        max_iterations: int = 5,
+    ) -> QueryResult:
         """Execute a query through the pipeline.
 
         Args:
             user_query: The user's question
+            history: Previous conversation messages (role, content dicts)
             max_iterations: Maximum number of LLM iterations to prevent infinite loops
 
         Returns:
             QueryResult with answer and sources
         """
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_query},
-        ]
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+        # Add conversation history
+        if history:
+            for msg in history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+
+        # Add current query
+        messages.append({"role": "user", "content": user_query})
 
         all_sources: List[RankedResult] = []
         tool_calls_made = 0

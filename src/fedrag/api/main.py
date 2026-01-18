@@ -1,5 +1,7 @@
 """FastAPI application for Fed RAG API."""
 
+from typing import Literal
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -33,10 +35,18 @@ def get_pipeline() -> QueryPipeline:
     return _pipeline
 
 
+class HistoryMessage(BaseModel):
+    """A message in the conversation history."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
 class QueryRequest(BaseModel):
     """Request body for query endpoint."""
 
     question: str
+    history: list[HistoryMessage] = []
 
 
 class SourceResponse(BaseModel):
@@ -69,7 +79,8 @@ def query(request: QueryRequest) -> QueryResponse:
     Takes a natural language question and returns an answer
     with relevant source documents.
     """
-    result = get_pipeline().query(request.question)
+    history = [{"role": msg.role, "content": msg.content} for msg in request.history]
+    result = get_pipeline().query(request.question, history=history)
     return QueryResponse(
         answer=result.answer,
         sources=[
