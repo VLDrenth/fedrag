@@ -60,8 +60,30 @@ function ChatInterface() {
     });
   };
 
+  const handleClear = () => {
+    setMessages([]);
+    setError(null);
+  };
+
   return (
     <div className="flex flex-col h-full">
+      {messages.length > 0 && (
+        <div className="px-6 py-3 border-b border-white/10 flex items-center justify-between">
+          <span className="text-sm text-stone-400">
+            {messages.length} message{messages.length !== 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={handleClear}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-stone-400 hover:text-stone-200 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" className="origin-center rotate-45" />
+            </svg>
+            New conversation
+          </button>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
