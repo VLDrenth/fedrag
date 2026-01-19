@@ -36,6 +36,13 @@ Filters available:
 """
 
 
+FOLLOW_UP_PROMPT = """Based on the conversation above, suggest 3 brief follow-up questions the user might want to ask next.
+These should be natural continuations that explore related topics or dig deeper into what was discussed.
+Prefer questions that could be answered by searching Fed speeches, statements, minutes, or testimony.
+Keep each question concise (under 10 words if possible).
+Return ONLY the questions, one per line, no numbering or bullets."""
+
+
 @dataclass
 class QueryResult:
     """Result from the query pipeline."""
@@ -43,6 +50,7 @@ class QueryResult:
     answer: str
     sources: List[RankedResult] = field(default_factory=list)
     tool_calls_made: int = 0
+    follow_ups: List[str] = field(default_factory=list)
 
 
 class QueryPipeline:
@@ -132,10 +140,14 @@ class QueryPipeline:
 
         logger.info(f"TIMING: LLM calls={total_llm_time:.2f}s, Search+Rerank={total_search_time:.2f}s")
 
+        # Generate follow-up questions
+        follow_ups = self._generate_follow_ups(user_query, message.content or "")
+
         return QueryResult(
             answer=message.content or "",
             sources=all_sources,
             tool_calls_made=tool_calls_made,
+            follow_ups=follow_ups,
         )
 
     def _parse_tool_args(self, arguments: str) -> SearchFedDocumentsArgs:
@@ -215,3 +227,38 @@ class QueryPipeline:
             )
 
         return "\n---\n".join(formatted)
+
+    def _generate_follow_ups(self, user_query: str, answer: str) -> List[str]:
+        """Generate follow-up question suggestions.
+
+        Args:
+            user_query: The original user question
+            answer: The assistant's answer
+
+        Returns:
+            List of 3 follow-up question suggestions
+        """
+        try:
+            messages = [
+                {"role": "user", "content": user_query},
+                {"role": "assistant", "content": answer},
+                {"role": "user", "content": FOLLOW_UP_PROMPT},
+            ]
+            response = self.llm_service.chat_without_tools(messages)
+            content = response.choices[0].message.content or ""
+
+            # Parse the response into individual questions
+            questions = [q.strip() for q in content.strip().split("\n") if q.strip()]
+            # Clean up any numbering or bullets
+            cleaned = []
+            for q in questions[:3]:
+                # Remove common prefixes like "1.", "1)", "-", "*", etc.
+                q = q.lstrip("0123456789.-)*• ").strip()
+                if q and q.endswith("?"):
+                    cleaned.append(q)
+                elif q:
+                    cleaned.append(q + "?")
+            return cleaned[:3]
+        except Exception as e:
+            logger.warning(f"Failed to generate follow-ups: {e}")
+            return []

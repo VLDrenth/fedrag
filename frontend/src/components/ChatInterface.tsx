@@ -65,6 +65,7 @@ function ChatInterface() {
         role: 'assistant',
         content: response.answer,
         sources: response.sources,
+        followUps: response.follow_ups,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -144,7 +145,12 @@ function ChatInterface() {
           </div>
         ) : (
           <>
-            <MessageList messages={messages} deduplicateSources={deduplicateSources} />
+            <MessageList
+              messages={messages}
+              deduplicateSources={deduplicateSources}
+              onFollowUpClick={handleSubmit}
+              isLoading={isLoading}
+            />
             {isLoading && (
               <div className="flex items-start gap-3 mt-4">
                 <div className="relative rounded-2xl px-5 py-4 border border-white/10 overflow-hidden">

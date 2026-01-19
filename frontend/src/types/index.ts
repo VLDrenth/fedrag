@@ -17,6 +17,7 @@ export interface QueryResponse {
   answer: string;
   sources: Source[];
   tool_calls_made: number;
+  follow_ups: string[];
 }
 
 export interface HistoryMessage {
@@ -29,5 +30,6 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  followUps?: string[];
   timestamp: Date;
 }

@@ -81,6 +81,7 @@ class QueryResponse(BaseModel):
     answer: str
     sources: list[SourceResponse]
     tool_calls_made: int
+    follow_ups: list[str]
 
 
 @app.post("/api/query", response_model=QueryResponse)
@@ -110,6 +111,7 @@ def query(request: QueryRequest) -> QueryResponse:
             for s in result.sources
         ],
         tool_calls_made=result.tool_calls_made,
+        follow_ups=result.follow_ups,
     )
 
 
