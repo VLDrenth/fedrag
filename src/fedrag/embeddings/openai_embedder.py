@@ -80,11 +80,15 @@ class OpenAIEmbedder:
         Returns:
             List of embedding vectors
         """
+        # Filter out empty strings
+        texts = [t if t.strip() else " " for t in texts]
+
         for attempt in range(max_retries):
             try:
                 response = self._client.embeddings.create(
                     model=self.config.model,
                     input=texts,
+                    dimensions=self.config.dimensions,
                 )
                 return [item.embedding for item in response.data]
 

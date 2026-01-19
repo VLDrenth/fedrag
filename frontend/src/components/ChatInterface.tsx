@@ -1,8 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { queryFed } from '../api/client';
 import { HistoryMessage, Message, Source } from '../types';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
+
+const loadingMessages = [
+  "Digging into the archives...",
+  "Parsing Fed communications...",
+  "Analyzing policy statements...",
+  "Searching through speeches...",
+  "Consulting the FOMC minutes...",
+  "Reading between the lines...",
+  "Decoding Fed speak...",
+  "Following the money...",
+];
 
 const exampleQueries = [
   { text: "What has Powell said about inflation?", category: "speeches" },
@@ -15,6 +26,19 @@ function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  // Cycle through loading messages
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleSubmit = useCallback(async (question: string) => {
     setError(null);
@@ -119,7 +143,26 @@ function ChatInterface() {
             </div>
           </div>
         ) : (
-          <MessageList messages={messages} deduplicateSources={deduplicateSources} />
+          <>
+            <MessageList messages={messages} deduplicateSources={deduplicateSources} />
+            {isLoading && (
+              <div className="flex items-start gap-3 mt-4">
+                <div className="relative rounded-2xl px-5 py-4 border border-white/10 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#1a2942] via-[#243347] to-[#1a2942] animate-shimmer" />
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-sm text-stone-400 italic">
+                      {loadingMessages[loadingMessageIndex]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
