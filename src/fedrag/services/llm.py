@@ -1,6 +1,7 @@
 """LLM service using OpenAI with Pydantic tool definitions."""
 
 import logging
+import os
 from typing import List, Literal, Optional
 
 import openai
@@ -43,6 +44,7 @@ class LLMService:
         model: str = "gpt-5.2",
         temperature: float = 0.0,
         max_tokens: int = 4096,
+        base_url: str | None = None,
     ):
         """Initialize the LLM service.
 
@@ -50,8 +52,16 @@ class LLMService:
             model: OpenAI model name
             temperature: Sampling temperature
             max_tokens: Maximum tokens in response
+            base_url: Optional base URL for OpenAI-compatible APIs (e.g., OpenRouter)
         """
-        self._client = OpenAI()
+        # Support OpenRouter API key
+        api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+
+        if base_url:
+            self._client = OpenAI(base_url=base_url, api_key=api_key)
+        else:
+            self._client = OpenAI()
+
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens

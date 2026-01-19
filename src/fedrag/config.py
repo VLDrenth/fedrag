@@ -93,15 +93,16 @@ class StorageConfig(BaseModel):
 class RerankerConfig(BaseModel):
     """Configuration for cross-encoder reranking."""
 
-    model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    model_name: str = "cross-encoder/ms-marco-TinyBERT-L-2-v2"
 
 
 class LLMConfig(BaseModel):
     """Configuration for LLM service."""
 
-    model: str = "gpt-5.2"
-    temperature: float = 0.0
+    model: str = "google/gemini-3-flash-preview"
+    temperature: float = 1.0
     max_tokens: int = 4096
+    base_url: str | None = "https://openrouter.ai/api/v1"
 
 
 class Config(BaseModel):

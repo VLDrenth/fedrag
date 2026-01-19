@@ -2,7 +2,9 @@
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
+from datetime import date
 from typing import List, Optional
 
 from ..config import Config, default_config
@@ -12,19 +14,25 @@ from .reranker import RankedResult, RerankerService
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are a helpful assistant specializing in Federal Reserve policy and communications.
-You have access to a search tool that can find relevant information from Fed speeches,
-FOMC statements, meeting minutes, and congressional testimony.
+SYSTEM_PROMPT_TEMPLATE = """Today's date is {today}.
 
-When answering questions:
-1. Use the search tool to find relevant information before answering
-2. You can make multiple search calls if needed to gather comprehensive information
-3. Always cite your sources by mentioning the speaker, date, and document type
-4. If the search returns no relevant results, say so honestly
-5. Focus on factual information from the documents rather than speculation
+You are a research assistant for Federal Reserve policy documents. You have access to a search tool containing Fed speeches, FOMC statements, meeting minutes, and congressional testimony from 2015 to present.
 
-For date-based queries, use the date_start and date_end filters (YYYY-MM-DD format).
-For speaker-specific queries, use the speaker filter with their full name.
+IMPORTANT: You MUST use the search tool to answer questions. Do NOT rely on your training data for Fed-related information - your knowledge may be outdated. Base your answers ONLY on the search results returned.
+
+When answering:
+1. Always search first before answering
+2. Think carefully about which filters best answer the question
+3. Make multiple searches if needed - use iterative tool calls to refine and verify your results
+4. Cite sources with speaker name, date, and document type
+5. If no relevant results are found, say so honestly - do not make up information
+
+Be thorough: make sure you are confident in your answer before responding. Don't hesitate to make multiple tool calls to refine your search or verify results. If a query requires the most recent data, verify you have found the newest content by searching with recent date filters.
+
+Filters available:
+- date_start / date_end: YYYY-MM-DD format
+- speaker: Last name only (e.g., 'Powell', 'Waller')
+- doc_type: 'speech', 'statement', 'minutes', or 'testimony'
 """
 
 
@@ -52,6 +60,7 @@ class QueryPipeline:
             model=self.config.llm.model,
             temperature=self.config.llm.temperature,
             max_tokens=self.config.llm.max_tokens,
+            base_url=self.config.llm.base_url,
         )
         self.reranker_service = RerankerService(
             model_name=self.config.reranker.model_name
@@ -73,7 +82,8 @@ class QueryPipeline:
         Returns:
             QueryResult with answer and sources
         """
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(today=date.today().isoformat())
+        messages = [{"role": "system", "content": system_prompt}]
 
         # Add conversation history
         if history:
@@ -85,10 +95,14 @@ class QueryPipeline:
 
         all_sources: List[RankedResult] = []
         tool_calls_made = 0
+        total_llm_time = 0.0
+        total_search_time = 0.0
 
         # Agentic loop - LLM decides when to call tools
         for _ in range(max_iterations):
+            llm_start = time.time()
             response = self.llm_service.chat(messages)
+            total_llm_time += time.time() - llm_start
             message = response.choices[0].message
 
             if message.tool_calls:
@@ -99,7 +113,11 @@ class QueryPipeline:
                 for tool_call in message.tool_calls:
                     tool_calls_made += 1
                     args = self._parse_tool_args(tool_call.function.arguments)
+
+                    search_start = time.time()
                     results = self._execute_search(args)
+                    total_search_time += time.time() - search_start
+
                     all_sources.extend(results)
 
                     # Add tool result to messages
@@ -111,6 +129,8 @@ class QueryPipeline:
             else:
                 # LLM has final answer
                 break
+
+        logger.info(f"TIMING: LLM calls={total_llm_time:.2f}s, Search+Rerank={total_search_time:.2f}s")
 
         return QueryResult(
             answer=message.content or "",
@@ -146,6 +166,7 @@ class QueryPipeline:
         )
 
         # Hybrid search with filters
+        search_start = time.time()
         results = self.indexing_service.search(
             query=args.query,
             doc_type=args.doc_type,
@@ -154,19 +175,22 @@ class QueryPipeline:
             date_end=args.date_end,
             limit=20,  # Fetch more for reranking
         )
+        search_time = time.time() - search_start
 
         if not results:
             logger.info("No search results found")
             return []
 
         # Rerank and return top 5
+        rerank_start = time.time()
         ranked = self.reranker_service.rerank(
             query=args.query,
             results=results,
             top_k=5,
         )
+        rerank_time = time.time() - rerank_start
 
-        logger.info(f"Reranked {len(results)} results, returning top {len(ranked)}")
+        logger.info(f"TIMING: Search={search_time:.2f}s, Rerank={rerank_time:.2f}s (from {len(results)} to {len(ranked)})")
         return ranked
 
     def _format_results(self, results: List[RankedResult]) -> str:
