@@ -29,7 +29,7 @@ function SourceCard({ source }: SourceCardProps) {
     <div className="bg-[#243347] rounded-xl border border-white/10 overflow-hidden hover:border-white/20 transition-all duration-200 hover:shadow-sm">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left p-4 hover:bg-white/5 transition-colors"
+        className="w-full text-left p-3 sm:p-4 hover:bg-white/5 transition-colors"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">

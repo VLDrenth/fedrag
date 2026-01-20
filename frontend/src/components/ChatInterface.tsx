@@ -93,7 +93,7 @@ function ChatInterface() {
   return (
     <div className="flex flex-col h-full">
       {messages.length > 0 && (
-        <div className="px-6 py-3 border-b border-white/10 flex items-center justify-between">
+        <div className="px-4 md:px-6 py-3 border-b border-white/10 flex items-center justify-between">
           <span className="text-sm text-stone-400">
             {messages.length} message{messages.length !== 1 ? 's' : ''}
           </span>
@@ -109,7 +109,7 @@ function ChatInterface() {
           </button>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-lg">
@@ -120,7 +120,7 @@ function ChatInterface() {
                 Query speeches, statements, and policy documents using natural language.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {exampleQueries.map((query) => (
                   <button
                     key={query.text}
@@ -173,7 +173,7 @@ function ChatInterface() {
       </div>
 
       {error && (
-        <div className="mx-6 mb-4 flex items-center gap-3 bg-red-950/50 border border-red-800/50 text-red-300 px-4 py-3 rounded-xl animate-fade-in">
+        <div className="mx-4 md:mx-6 mb-4 flex items-center gap-3 bg-red-950/50 border border-red-800/50 text-red-300 px-4 py-3 rounded-xl animate-fade-in">
           <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -181,7 +181,7 @@ function ChatInterface() {
         </div>
       )}
 
-      <div className="px-6 pb-6 pt-2 border-t border-white/10 bg-[#1a2942]">
+      <div className="px-4 md:px-6 pb-4 md:pb-6 pt-2 border-t border-white/10 bg-[#1a2942]">
         <ChatInput onSubmit={handleSubmit} isLoading={isLoading} />
       </div>
     </div>

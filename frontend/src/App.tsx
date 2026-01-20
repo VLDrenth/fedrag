@@ -12,7 +12,7 @@ function App() {
     <div className="min-h-screen flex flex-col">
       {/* Minimal header */}
       <header className="border-b border-white/10 bg-[#0a1628]/80 backdrop-blur-sm gradient-border">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center gap-3">
             <span className="font-mono text-xl font-semibold tracking-tight text-white">
               fed<span className="text-blue-400">/</span>
@@ -23,9 +23,9 @@ function App() {
       </header>
 
       {/* Main content area with sidebar */}
-      <main className="flex-1 max-w-6xl mx-auto w-full p-6 flex gap-6">
-        {/* Sidebar */}
-        <aside className="w-56 flex-shrink-0">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-3 md:px-6 py-4 md:py-6 flex gap-4 md:gap-6">
+        {/* Sidebar - hidden on mobile */}
+        <aside className="hidden md:block w-56 flex-shrink-0">
           <div className="bg-[#1a2942] rounded-xl border border-white/10 p-4">
             <h3 className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-4">
               Document Sources
@@ -42,7 +42,7 @@ function App() {
         </aside>
 
         {/* Chat area */}
-        <div className="flex-1 glass-card rounded-2xl shadow-2xl h-[calc(100vh-120px)] overflow-hidden border border-white/10">
+        <div className="flex-1 glass-card rounded-2xl shadow-2xl h-[calc(100dvh-80px)] md:h-[calc(100dvh-120px)] overflow-hidden border border-white/10">
           <ChatInterface />
         </div>
       </main>

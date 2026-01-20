@@ -17,7 +17,7 @@ function ChatMessage({ message, deduplicateSources, showFollowUps, onFollowUpCli
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-slide-up`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-5 py-4 ${
+        className={`max-w-[95%] sm:max-w-[85%] rounded-2xl px-3 sm:px-5 py-3 sm:py-4 ${
           isUser
             ? 'bg-gradient-to-br from-[#0a1628] to-[#1a2942] text-white shadow-lg'
             : 'bg-[#1a2942] shadow-lg border border-white/10'
@@ -64,7 +64,7 @@ function ChatMessage({ message, deduplicateSources, showFollowUps, onFollowUpCli
                 <button
                   key={idx}
                   onClick={() => onFollowUpClick?.(question)}
-                  className="text-sm px-3 py-1.5 rounded-full bg-[#243347] hover:bg-blue-600/30 border border-white/10 hover:border-blue-500/50 text-stone-300 hover:text-white transition-all duration-200"
+                  className="text-xs sm:text-sm px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#243347] hover:bg-blue-600/30 border border-white/10 hover:border-blue-500/50 text-stone-300 hover:text-white transition-all duration-200"
                 >
                   {question}
                 </button>

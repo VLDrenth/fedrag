@@ -60,7 +60,7 @@ function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="flex-shrink-0 w-11 h-11 bg-gradient-to-br from-[#0a1628] to-[#1a2942] text-white rounded-lg flex items-center justify-center hover:from-[#1a2942] hover:to-[#2a3952] disabled:from-stone-300 disabled:to-stone-300 disabled:cursor-not-allowed transition-all duration-200 shadow-md disabled:shadow-none"
+            className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-[#0a1628] to-[#1a2942] text-white rounded-lg flex items-center justify-center hover:from-[#1a2942] hover:to-[#2a3952] disabled:from-stone-300 disabled:to-stone-300 disabled:cursor-not-allowed transition-all duration-200 shadow-md disabled:shadow-none"
           >
             {isLoading ? (
               <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -75,7 +75,7 @@ function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
           </button>
         </div>
       </div>
-      <div className="flex items-center justify-center gap-4 mt-3">
+      <div className="hidden sm:flex items-center justify-center gap-4 mt-3">
         <span className="text-xs text-stone-400">
           <kbd className="px-1.5 py-0.5 bg-[#0a1628] rounded text-stone-400 font-medium text-[10px]">↵</kbd> send
         </span>
